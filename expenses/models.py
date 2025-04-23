@@ -24,7 +24,7 @@ class Expense(models.Model):
 
 class Budget(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='budgets')
-    category = models.ForeignKey(Category, on_delete=models.PROTECT)
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, db_column='category_id')  # Stores only the ID
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     PERIOD_CHOICES = [
         ('daily', 'Daily'),
