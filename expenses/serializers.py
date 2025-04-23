@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from .models import Expense, Budget, Category
+from django.db.models import Sum
+from django.utils import timezone
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -47,15 +49,35 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
 
 class BudgetSerializer(serializers.ModelSerializer):
+    user = serializers.StringRelatedField()
+    current_spending = serializers.SerializerMethodField()
+    category = CategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        write_only=True,
+        source='category'
+    )
+
     class Meta:
         model = Budget
-        fields = ['id', 'category', 'category_id', 'amount', 'period', 'start_date', 'end_date']
-        read_only_fields = ['user']  #
+        fields = ['id', 'user', 'category', 'category_id', 'amount', 'period',
+                  'start_date', 'end_date', 'current_spending']
 
     def validate(self, data):
         if data['start_date'] > data.get('end_date', data['start_date']):
             raise serializers.ValidationError("End date must be after start date")
         return data
+
+    def get_current_spending(self, obj):
+        # Implement your spending calculation logic
+        # Example: sum of expenses in this budget's period
+        expenses = Expense.objects.filter(
+            user=obj.user,
+            category=obj.category,
+            date__gte=obj.start_date,
+            date__lte=obj.end_date if obj.end_date else timezone.now().date()
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        return float(expenses)
 
     def validate_category_id(self, value):
         """

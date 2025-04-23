@@ -29,10 +29,14 @@ class Budget(models.Model):
     PERIOD_CHOICES = [
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
+        ('biweekly', 'Bi-Weekly'),
         ('monthly', 'Monthly'),
+        ('six_month', 'Six Month'),
         ('yearly', 'Yearly'),
+        ('five_year', 'Five Year'),
+        ('ten_year', 'Ten Year'),
     ]
-    period = models.CharField(max_length=10, choices=PERIOD_CHOICES, default='monthly')
+    period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='monthly')
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
 

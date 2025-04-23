@@ -1,3 +1,5 @@
+# TrackSpendProject/urls
+# from django.contrib import admin
 from django.contrib import admin
 from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
@@ -7,7 +9,13 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from users.views import (
     RegisterAPIView,
     CustomTokenObtainPairView,
-    UserProfileAPIView
+    UserProfileAPIView,
+    AdminUserListCreateAPIView,
+    AdminUserRetrieveUpdateDestroyAPIView,
+    AdminCategoryListCreateAPIView,
+    AdminCategoryRetrieveUpdateDestroyAPIView,
+    AdminBudgetListCreateAPIView,
+    AdminBudgetRetrieveUpdateDestroyAPIView
 )
 from django.views.generic import RedirectView
 router = DefaultRouter()
@@ -39,4 +47,15 @@ urlpatterns = [
     path('api/categories/<int:pk>/', CategoryRetrieveAPIView.as_view(), name='category-detail'),
     path('api/budgets/', BudgetListCreateAPIView.as_view(), name='budget-list'),
     path('api/budgets/<int:pk>/', BudgetRetrieveUpdateDestroyAPIView.as_view(), name='budget-detail'),
+
+    # Admin Endpoints
+    path('api/admin/users/', AdminUserListCreateAPIView.as_view(), name='admin-users-list'),
+    path('api/admin/users/<int:pk>/', AdminUserRetrieveUpdateDestroyAPIView.as_view(), name='admin-user-detail'),
+    path('api/admin/categories/', AdminCategoryListCreateAPIView.as_view(), name='admin-categories-list'),
+    path('api/admin/categories/<int:pk>/', AdminCategoryRetrieveUpdateDestroyAPIView.as_view(),
+         name='admin-category-detail'),
+    path('api/admin/budgets/', AdminBudgetListCreateAPIView.as_view(), name='admin-budgets-list'),
+    path('api/admin/budgets/<int:pk>/', AdminBudgetRetrieveUpdateDestroyAPIView.as_view(), name='admin-budget-detail'),
+
+
 ]
