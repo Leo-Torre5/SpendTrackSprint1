@@ -159,7 +159,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
-    "https://track-spend-fe-sprint1.vercel.app/"
+    "https://track-spend-fe-sprint1.vercel.app"
 ]
 
 CORS_ALLOW_METHODS = [
