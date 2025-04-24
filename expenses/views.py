@@ -56,9 +56,12 @@ class BudgetListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = BudgetSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-
     def get_queryset(self):
         return Budget.objects.filter(user=self.request.user).select_related('category')
+
+    def perform_create(self, serializer):
+        # Associe l'utilisateur authentifié au budget lors de sa création
+        serializer.save(user=self.request.user)
 
 
 class BudgetRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):

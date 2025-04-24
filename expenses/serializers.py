@@ -49,19 +49,17 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
 
 class BudgetSerializer(serializers.ModelSerializer):
-    user = serializers.StringRelatedField()
+    user = serializers.StringRelatedField(read_only=True)  # Make sure it's read_only
     current_spending = serializers.SerializerMethodField()
     category = CategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        write_only=True,
-        source='category'
-    )
+    category_id = serializers.IntegerField(write_only=True)
 
     class Meta:
         model = Budget
         fields = ['id', 'user', 'category', 'category_id', 'amount', 'period',
                   'start_date', 'end_date', 'current_spending']
+        read_only_fields = ['user']  # Explicitly mark user as read-only
+
 
     def validate(self, data):
         if data['start_date'] > data.get('end_date', data['start_date']):
@@ -91,6 +89,7 @@ class BudgetSerializer(serializers.ModelSerializer):
         category_id = validated_data.pop('category_id')
         validated_data['category'] = Category.objects.get(id=category_id)
         return super().create(validated_data)
+
 
     def update(self, instance, validated_data):
         category_id = validated_data.pop('category_id', None)
