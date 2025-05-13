@@ -1,10 +1,10 @@
+import json
+
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
-from django.shortcuts import get_object_or_404
-from rest_framework.parsers import JSONParser
 from .serializers import (
     RegisterSerializer,
     UserSerializer,
@@ -15,9 +15,17 @@ from .serializers import (
 )
 from .models import CustomUser, Profile
 from expenses.models import Category, Budget
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from .serializers import UpdateUserProfileSerializer
+from django.core.mail import send_mail
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+
 def getUser(request):
     user = request.user
     return Response({
@@ -46,35 +54,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             }
         return response
 
-
-class UserProfileAPIView(generics.RetrieveAPIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        user = request.user
-        try:
-            profile = user.profile
-            profile_data = {
-                'phone_number': profile.phone_number,
-                'street_address': profile.street_address,
-                'zip_code': profile.zip_code,
-                'state': profile.state,
-                'profile_picture': profile.profile_picture.url if profile.profile_picture else None
-            }
-        except Profile.DoesNotExist:
-            profile_data = None
-
-        data = {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'is_staff': user.is_staff,
-            'is_superuser': user.is_superuser,
-            'user_type': user.user_type,
-            'profile': profile_data
-        }
-        return Response(data)
-
 # Admin Views
 class IsAdminUser(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -88,7 +67,6 @@ class AdminUserListCreateAPIView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         # Add additional context if needed
         serializer.save()
-
 
 class AdminUserRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = CustomUser.objects.all()
@@ -121,3 +99,73 @@ class AdminBudgetRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIV
     queryset = Budget.objects.all()
     serializer_class = AdminBudgetSerializer
     permission_classes = [IsAuthenticated, IsAdminUser]
+
+class UserProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        custom_user = CustomUser.objects.get(id=user.id)
+        profile = Profile.objects.get(user=custom_user)
+
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'user_type': user.user_type,
+            'profile': {
+                'id': profile.id,
+                'phone_number': profile.phone_number,
+                'street_address': profile.street_address,
+                'zip_code': profile.zip_code,
+                'state': profile.state,
+                'profile_picture': request.build_absolute_uri(
+                    profile.profile_picture.url) if profile.profile_picture else None
+            }
+        }
+
+        return Response(user_data, status=status.HTTP_200_OK)
+
+class UpdateUserProfileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def put(self, request, *args, **kwargs):
+        profile = request.user.profile
+        serializer = UpdateUserProfileSerializer(profile, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# E-Mail
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def contact_view(request):
+    if request.method == "GET":
+        return JsonResponse({
+            "message": "Please send a POST request to this url."
+        })
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '')
+        email = data.get('email', '')
+        message = data.get('message', '')
+
+        # Sending email
+        send_mail(
+            subject=f'Message from {name}',
+            message=f'Message sent by {name} ({email}):\n\n{message}',
+            from_email=email,
+            recipient_list=['fscherer@unomaha.edu'],
+            fail_silently=False,
+        )
+
+        return JsonResponse({'message': 'Message succesfully sent!'}, status=200)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

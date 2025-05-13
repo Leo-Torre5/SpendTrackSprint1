@@ -15,12 +15,17 @@ class Category(models.Model):
         verbose_name_plural = "Categories"
 
 class Expense(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expenses')
+    user = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE, related_name='expenses')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='expenses')
     date = models.DateField()
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    indexes = [
+        models.Index(fields=['date']),
+        models.Index(fields=['user', 'category']),
+    ]
+
 
 class Budget(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='budgets')
@@ -39,6 +44,15 @@ class Budget(models.Model):
     period = models.CharField(max_length=20, choices=PERIOD_CHOICES, default='monthly')
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(amount__gte=0),
+                name='budget_amount_non_negative'
+            )
+        ]
+
 
 class Report(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reports')

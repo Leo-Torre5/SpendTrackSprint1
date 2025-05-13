@@ -3,6 +3,39 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import CustomUser, Profile
 from expenses.models import Category, Budget
 from expenses.serializers import CategorySerializer
+from rest_framework import serializers
+from .models import CustomUser, Profile
+
+class UpdateUserProfileSerializer(serializers.ModelSerializer):
+    first_name = serializers.CharField(source='user.first_name', required=False)
+    last_name = serializers.CharField(source='user.last_name', required=False)
+    email = serializers.EmailField(source='user.email', required=False)
+    phone_number = serializers.CharField(required=False)
+    street_address = serializers.CharField(required=False)
+    zip_code = serializers.CharField(required=False)
+    state = serializers.CharField(required=False)
+    profile_picture = serializers.ImageField(required=False)
+
+    class Meta:
+        model = Profile
+        fields = ['first_name', 'last_name', 'email', 'phone_number',
+                  'street_address', 'zip_code', 'state', 'profile_picture']
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+        # Mise à jour des champs de l'utilisateur
+        if user_data:
+            user = instance.user
+            for attr, value in user_data.items():
+                setattr(user, attr, value)
+            user.save()
+
+        # Mise à jour des champs du profil
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -12,7 +45,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'profile_picture': {'required': False}
         }
-
 
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
@@ -35,7 +67,6 @@ class UserSerializer(serializers.ModelSerializer):
 
         return instance
 
-
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
 
@@ -51,7 +82,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             user_type=validated_data.get('user_type', 1)
         )
         return user
-
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
