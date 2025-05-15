@@ -130,49 +130,29 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 # Admin serializers
-
 class AdminUserSerializer(serializers.ModelSerializer):
-    profile = ProfileSerializer(required=False)
-    password = serializers.CharField(
-        write_only=True,
-        required=False,
-        style={'input_type': 'password'}
-    )
+    profile = UpdateUserProfileSerializer()
 
     class Meta:
         model = CustomUser
-        fields = [
-            'id', 'username', 'email', 'password',
-            'first_name', 'last_name', 'user_type',
-            'is_active', 'profile'
-        ]
+        fields = ['id', 'username', 'email', 'password', 'first_name', 'last_name', 'user_type', 'is_active', 'profile']
+        extra_kwargs = {'password': {'write_only': True, 'required': False}}
 
     def create(self, validated_data):
-        # Extract profile data and password
-        profile_data = validated_data.pop('profile', {})
-        password = validated_data.pop('password', None)
+        profile_data = validated_data.pop('profile')
+        password = validated_data.pop('password')
+        user = CustomUser.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save()
 
-        # Create user with proper password handling
-        user = CustomUser.objects.create_user(
-            **validated_data,
-            password=password
-        )
-
-        # Update associated profile
-        profile = user.profile
-        for attr, value in profile_data.items():
-            setattr(profile, attr, value)
-        profile.save()
-
+        Profile.objects.create(user=user, **profile_data)
         return user
 
     def update(self, instance, validated_data):
-        # Profile data handling
-        profile_data = validated_data.pop('profile', {})
-        profile = instance.profile
+        profile_data = validated_data.pop('profile', {})  # Changed to {}
+        password = validated_data.pop('password', None)  # Changed to None
 
-        # Password update handling
-        password = validated_data.pop('password', None)
+        # Update password if provided
         if password:
             instance.set_password(password)
 
@@ -182,6 +162,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         instance.save()
 
         # Update profile fields
+        profile = instance.profile
         for attr, value in profile_data.items():
             setattr(profile, attr, value)
         profile.save()
