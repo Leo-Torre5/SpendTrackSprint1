@@ -20,6 +20,7 @@ class Expense(models.Model):
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='expenses')
     date = models.DateField()
     description = models.TextField(blank=True)
+    notes = models.TextField(blank=True)  # Added notes field
     created_at = models.DateTimeField(auto_now_add=True)
     indexes = [
         models.Index(fields=['date']),

@@ -29,8 +29,10 @@ class Profile(models.Model):
     )
     phone_number = models.CharField(max_length=20, blank=True)
     street_address = models.CharField(max_length=255, blank=True)
-    zip_code = models.CharField(max_length=20, blank=True)
+    city = models.CharField(max_length=100, blank=True)
     state = models.CharField(max_length=100, blank=True)
+    zip_code = models.CharField(max_length=20, blank=True)
+
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -55,11 +57,12 @@ class Profile(models.Model):
                 raise ValidationError('Invalid file type')
 
 
-@receiver(post_save, sender=CustomUser)
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
-
-@receiver(post_save, sender=CustomUser)
-def save_user_profile(sender, instance, **kwargs):
-    instance.profile.save()
+# @receiver(post_save, sender=CustomUser)
+# def create_user_profile(sender, instance, created, **kwargs):
+#     if created:
+#         Profile.objects.create(user=instance)
+#
+#
+# @receiver(post_save, sender=CustomUser)
+# def save_user_profile(sender, instance, **kwargs):
+#     instance.profile.save()

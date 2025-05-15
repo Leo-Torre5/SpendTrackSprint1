@@ -3,7 +3,7 @@ import json
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.views import TokenObtainPairView
 from .serializers import (
     RegisterSerializer,
@@ -35,7 +35,25 @@ def getUser(request):
 
 class RegisterAPIView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save() # Save the user instance
+
+        # Generate token upon successful registration
+        token_pair = CustomTokenObtainPairSerializer.get_token(user)
+        refresh_token = str(token_pair)
+        access_token = str(token_pair.access_token)
+
+        response_data = {
+            "refresh": refresh_token,
+            "access": access_token,
+            "user": UserSerializer(user).data,
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -43,16 +61,20 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
-            user = CustomUser.objects.get(username=request.data['username'])
-            response.data['user'] = {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser,
-                'user_type': user.user_type
-            }
+            user_data = response.data.get('user')
+            if user_data:
+                # Include user data in the response
+                response.data['user'] = user_data
         return response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getUser(request):
+    user = request.user
+    return Response({
+        'username': user.username,
+        'email': user.email
+    })
 
 # Admin Views
 class IsAdminUser(permissions.BasePermission):
@@ -119,6 +141,7 @@ class UserProfileAPIView(APIView):
                 'id': profile.id,
                 'phone_number': profile.phone_number,
                 'street_address': profile.street_address,
+                'city': profile.city,
                 'zip_code': profile.zip_code,
                 'state': profile.state,
                 'profile_picture': request.build_absolute_uri(

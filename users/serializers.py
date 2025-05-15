@@ -12,6 +12,7 @@ class UpdateUserProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source='user.email', required=False)
     phone_number = serializers.CharField(required=False)
     street_address = serializers.CharField(required=False)
+    city = serializers.CharField(required=False)  # Added the city field
     zip_code = serializers.CharField(required=False)
     state = serializers.CharField(required=False)
     profile_picture = serializers.ImageField(required=False)
@@ -19,7 +20,7 @@ class UpdateUserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['first_name', 'last_name', 'email', 'phone_number',
-                  'street_address', 'zip_code', 'state', 'profile_picture']
+                  'street_address', 'city', 'zip_code', 'state', 'profile_picture']
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop('user', {})
@@ -41,7 +42,7 @@ class UpdateUserProfileSerializer(serializers.ModelSerializer):
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['phone_number', 'street_address', 'zip_code', 'state', 'profile_picture']
+        fields = ['phone_number', 'street_address', 'city', 'zip_code', 'state', 'profile_picture']
         extra_kwargs = {
             'profile_picture': {'required': False}
         }
@@ -69,19 +70,56 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    phone_number = serializers.CharField(required=False, allow_blank=True)
+    street_address = serializers.CharField(required=False, allow_blank=True)
+    city = serializers.CharField(required=False, allow_blank=True)
+    state = serializers.CharField(required=False, allow_blank=True)
+    zip_code = serializers.CharField(required=False, allow_blank=True)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'email', 'password', 'user_type')
+        fields = ('username', 'email', 'password', 'user_type', 'first_name', 'last_name',
+                  'phone_number', 'street_address', 'city', 'state', 'zip_code', 'profile_picture')
 
     def create(self, validated_data):
+        password = validated_data.pop('password')
+        user_type = validated_data.pop('user_type', 1)
+        first_name = validated_data.pop('first_name')
+        last_name = validated_data.pop('last_name')
+        phone_number = validated_data.pop('phone_number', '')
+        street_address = validated_data.pop('street_address', '')
+        city = validated_data.pop('city', '')
+        state = validated_data.pop('state', '')
+        zip_code = validated_data.pop('zip_code', '')
+        profile_picture = validated_data.pop('profile_picture', None)
+
         user = CustomUser.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
-            password=validated_data['password'],
-            user_type=validated_data.get('user_type', 1)
+            password=password,
+            user_type=user_type,
+            first_name=first_name,
+            last_name=last_name,
         )
+
+        # Get the default image path from the Profile model
+        default_image = Profile.profile_picture.field.default
+
+        Profile.objects.create(
+            user=user,
+            phone_number=phone_number,
+            street_address=street_address,
+            city=city,
+            state=state,
+            zip_code=zip_code,
+            profile_picture=profile_picture if profile_picture else default_image, # Use provided image or default
+        )
+
         return user
+
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod

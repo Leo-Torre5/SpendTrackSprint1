@@ -22,7 +22,7 @@ class ExpenseSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Expense
-        fields = ['id', 'amount', 'category', 'category_id', 'date', 'description', 'created_at']
+        fields = ['id', 'amount', 'category', 'category_id', 'date', 'description', 'notes', 'created_at']
         read_only_fields = ['created_at']
 
     def validate_category_id(self, value):

@@ -6,7 +6,7 @@ from .models import CustomUser, Profile
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
-    fields = ('phone_number', 'street_address', 'zip_code', 'state', 'profile_picture')
+    fields = ('phone_number', 'street_address', 'city', 'zip_code', 'state', 'profile_picture')
     verbose_name_plural = 'Profile'
 
 
